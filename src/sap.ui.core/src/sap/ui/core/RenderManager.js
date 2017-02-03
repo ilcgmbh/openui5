@@ -10,6 +10,45 @@ sap.ui.define([
 	], function(jQuery, Interface, BaseObject, LabelEnablement /* , jQuerySap1, jQuerySap */) {
 
 	"use strict";
+	
+	var regTagAndNS = /^<([^\s]*)(.*?xmlns="([^"]*)[^>]*)>(.*?)<\/\1>$/;
+	var regEmptyTagAndNS = /^<([^\s]*)(.*?xmlns="([^"]*)[^/]*)\/?>$/;
+	var regAttrs = /([^\s=]*)="([^\"]*)"/g;
+	var regEventHandler = /^on.*/;
+
+	function createNSNode(sHTML) {
+		var tagAndNSMatch = sHTML.match(regTagAndNS) || sHTML.match(regEmptyTagAndNS);
+		var tag, tagAttrs, ns, innerHTML;
+
+
+		if (tagAndNSMatch) {
+			tag = tagAndNSMatch[1];
+			tagAttrs = tagAndNSMatch[2];
+			ns = tagAndNSMatch[3];
+			innerHTML = tagAndNSMatch[4];
+		} else {
+			return null;
+		}
+
+		var newElement = document.createElementNS(ns, tag);
+
+		var attrMatch = regAttrs.exec(tagAttrs);
+		while (attrMatch) {
+			if (attrMatch[1].match(regEventHandler)) {
+				newElement[attrMatch[1]] = attrMatch[2];
+			} else {
+				newElement.setAttribute(attrMatch[1], attrMatch[2]);
+			}
+			attrMatch = regAttrs.exec(tagAttrs);
+		}
+
+		if (innerHTML) {
+			newElement.innerHTML = innerHTML;
+		}
+
+		return newElement;
+	}
+
 
 	var aCommonMethods = ["renderControl", "write", "writeEscaped", "translate", "writeAcceleratorKey", "writeControlData", "writeInvisiblePlaceholderData",
 						  "writeElementData", "writeAttribute", "writeAttributeEscaped", "addClass", "writeClasses",
@@ -718,7 +757,7 @@ sap.ui.define([
 								} else if ( isDomPatchingEnabled() ) {
 									jQuery.sap.replaceDOM(oldDomNode, sHTML, true);
 								} else {
-									jQuery(oldDomNode).replaceWith(sHTML);
+									jQuery(oldDomNode).replaceWith(createNSNode(sHTML) || sHTML);
 								}
 							} else {
 								fAppend();
